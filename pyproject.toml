@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "api-scada-tml"
+version = "0.1.0"
+description = "Safe read-only HTTP API for OWEN TML / Telemechanika Lite SCADA system"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    {name = "API-SCADA-TML Contributors"}
+]
+keywords = ["SCADA", "TML", "API", "OWEN", "read-only"]
+
+dependencies = [
+    "flask>=2.3.0",
+    "python-dotenv>=1.0.0",
+    "pyodbc>=4.0.35",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "black>=23.0",
+    "flake8>=6.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/yourusername/API-SCADA-TML"
+Documentation = "https://github.com/yourusername/API-SCADA-TML/wiki"
+Repository = "https://github.com/yourusername/API-SCADA-TML.git"
+"Bug Tracker" = "https://github.com/yourusername/API-SCADA-TML/issues"
+
+[tool.setuptools]
+packages = ["app"]
+
+[tool.black]
+line-length = 100
+target-version = ['py310']
+
+[tool.isort]
+profile = "black"
+line_length = 100

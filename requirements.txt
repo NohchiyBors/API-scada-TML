@@ -1,0 +1,2 @@
+# Optional: pyodbc is already installed on this host.
+pyodbc
