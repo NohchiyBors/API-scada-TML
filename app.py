@@ -240,6 +240,269 @@ def query(database, sql, params=None):
         return rows_to_dicts(cur, cur.fetchall())
 
 
+def sql_table_exists(database, schema_name, table_name):
+    rows = query(database, """
+        SELECT 1 AS exists_flag
+        FROM INFORMATION_SCHEMA.TABLES
+        WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?
+    """, [schema_name, table_name])
+    return bool(rows)
+
+
+def default_database():
+    databases = configured_databases()
+    if not databases:
+        raise ValueError("No database configured in TML_SQL_DATABASES")
+    return databases[0]
+
+
+def parse_limit(qs, default=100, maximum=500):
+    raw = qs.get("limit", [default])[0]
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        value = default
+    return min(max(value, 1), maximum)
+
+
+def normalize_priority(value):
+    if value is None:
+        return "normal"
+    text = str(value).strip().lower()
+    if text in {"critical", "high", "medium", "low", "normal"}:
+        return text
+    if text in {"alarm", "error", "danger", "авария", "критический"}:
+        return "high"
+    if text in {"warning", "warn", "предупреждение"}:
+        return "medium"
+    return "normal"
+
+
+def mobile_object_from_row(row):
+    return {
+        "id": str(row.get("id")),
+        "name": row.get("name") or f"Object {row.get('id')}",
+        "protocol": row.get("protocol"),
+        "endpoint": row.get("endpoint"),
+        "tmlSysAddr": row.get("tml_sys_addr"),
+        "tmlGuid": row.get("tml_guid"),
+        "sourcePath": row.get("tml_source_path"),
+        "status": "unknown",
+        "lastSeenUtc": None,
+        "createdAtUtc": row.get("created_at_utc"),
+    }
+
+
+def mobile_point_from_row(row):
+    return {
+        "id": str(row.get("id")),
+        "objectId": str(row.get("controller_id")),
+        "name": row.get("name") or f"Point {row.get('id')}",
+        "address": row.get("address"),
+        "dataType": row.get("data_type"),
+        "unit": row.get("unit"),
+        "tmlType": row.get("tml_type"),
+        "tmlGroupId": row.get("tml_group_id"),
+        "tmlPointId": row.get("tml_point_id"),
+        "path": row.get("tml_path"),
+        "latestValue": row.get("value_text"),
+        "quality": row.get("quality") or "not_available",
+        "updatedAtUtc": row.get("source_timestamp_utc") or row.get("received_at_utc"),
+        "currentSource": "dbo.scada_point_current",
+    }
+
+
+def mobile_incident_from_row(row):
+    event_id = row.get("id")
+    object_id = row.get("mobile_object_id") or row.get("object_id")
+    point_id = row.get("point_id")
+    return {
+        "id": f"scada-event-{event_id}",
+        "objectId": None if object_id is None else str(object_id),
+        "pointId": None if point_id is None else str(point_id),
+        "pointName": row.get("point_name"),
+        "priority": normalize_priority(row.get("severity")),
+        "status": row.get("status") or "new",
+        "message": row.get("message") or row.get("category") or "SCADA event",
+        "timestampUtc": row.get("timestamp_utc"),
+        "source": row.get("source") or "dbo.scada_events",
+        "sourceName": row.get("source_name"),
+        "category": row.get("category"),
+        "adapterStatus": row.get("adapter_status") or "catalog_or_normalized_events_only",
+    }
+
+
+def mobile_objects(limit=100):
+    db = default_database()
+    rows = query(db, f"""
+        SELECT TOP ({limit})
+            id, project_id, name, protocol, endpoint, tml_sys_addr, tml_guid,
+            tml_source_path, created_at_utc
+        FROM dbo.scada_controllers
+        ORDER BY name, id
+    """)
+    return [mobile_object_from_row(row) for row in rows]
+
+
+def mobile_object(object_id):
+    db = default_database()
+    rows = query(db, """
+        SELECT
+            id, project_id, name, protocol, endpoint, tml_sys_addr, tml_guid,
+            tml_source_path, created_at_utc
+        FROM dbo.scada_controllers
+        WHERE id = ?
+    """, [object_id])
+    return mobile_object_from_row(rows[0]) if rows else None
+
+
+def mobile_points(object_id, limit=200):
+    db = default_database()
+    rows = query(db, f"""
+        SELECT TOP ({limit})
+            p.id, p.controller_id, p.name, p.address, p.data_type, p.unit, p.tml_type,
+            p.tml_group_id, p.tml_point_id, p.tml_path, p.created_at_utc,
+            c.value_text, c.quality, c.source_timestamp_utc, c.received_at_utc
+        FROM dbo.scada_points p
+        LEFT JOIN dbo.scada_point_current c ON c.point_id = p.id
+        WHERE p.controller_id = ?
+        ORDER BY p.name, p.id
+    """, [object_id])
+    return [mobile_point_from_row(row) for row in rows]
+
+
+def mobile_incidents(limit=100, object_id=None):
+    db = default_database()
+    if sql_table_exists(db, "dbo", "mobile_incidents"):
+        return mobile_incidents_from_adapter(db, limit=limit, object_id=object_id)
+
+    params = []
+    where = ""
+    if object_id is not None:
+        where = "WHERE COALESCE(e.object_id, p.controller_id, 'tml-alarms') = ?"
+        params.append(object_id)
+    rows = query(db, f"""
+        SELECT TOP ({limit})
+            e.id, e.category, e.severity, e.message, e.source_name, e.object_id,
+            COALESCE(e.object_id, p.controller_id, 'tml-alarms') AS mobile_object_id,
+            e.point_id, p.name AS point_name, e.timestamp_utc
+        FROM dbo.scada_events e
+        LEFT JOIN dbo.scada_points p ON p.id = e.point_id
+        {where}
+        ORDER BY e.timestamp_utc DESC, e.id DESC
+    """, params)
+    return [mobile_incident_from_row(row) for row in rows]
+
+
+def mobile_incidents_from_adapter(db, limit=100, object_id=None):
+    params = []
+    where = ""
+    if object_id is not None:
+        where = "WHERE object_id = ?"
+        params.append(object_id)
+    rows = query(db, f"""
+        SELECT TOP ({limit})
+            incident_id AS id,
+            object_id,
+            object_id AS mobile_object_id,
+            point_id,
+            point_name,
+            priority AS severity,
+            status,
+            message,
+            source_timestamp_utc AS timestamp_utc,
+            source,
+            source_name,
+            category,
+            'materialized_mobile_incidents' AS adapter_status
+        FROM dbo.mobile_incidents
+        {where}
+        ORDER BY source_timestamp_utc DESC, incident_id DESC
+    """, params)
+    return [mobile_incident_from_row(row) for row in rows]
+
+
+def mobile_incident_source_status():
+    db = default_database()
+    adapter_exists = sql_table_exists(db, "dbo", "mobile_incidents")
+    adapter_indexes = []
+    if adapter_exists:
+        adapter_indexes = query(db, """
+            SELECT
+                i.name AS index_name,
+                i.type_desc,
+                i.is_primary_key,
+                c.name AS column_name,
+                ic.key_ordinal,
+                ic.is_descending_key
+            FROM sys.indexes i
+            JOIN sys.objects o ON o.object_id = i.object_id
+            JOIN sys.schemas s ON s.schema_id = o.schema_id
+            LEFT JOIN sys.index_columns ic ON ic.object_id = i.object_id AND ic.index_id = i.index_id
+            LEFT JOIN sys.columns c ON c.object_id = i.object_id AND c.column_id = ic.column_id
+            WHERE s.name = 'dbo' AND o.name = 'mobile_incidents'
+            ORDER BY i.index_id, ic.key_ordinal, ic.index_column_id
+        """)
+    adapter_index_columns = [
+        row.get("column_name")
+        for row in adapter_indexes
+        if row.get("index_name") and row.get("column_name")
+    ]
+    adapter_ready = adapter_exists and "source_timestamp_utc" in adapter_index_columns
+    index_rows = query(db, """
+        SELECT
+            i.name AS index_name,
+            i.type_desc,
+            i.is_primary_key,
+            c.name AS column_name,
+            ic.key_ordinal,
+            ic.is_descending_key
+        FROM sys.indexes i
+        JOIN sys.objects o ON o.object_id = i.object_id
+        JOIN sys.schemas s ON s.schema_id = o.schema_id
+        LEFT JOIN sys.index_columns ic ON ic.object_id = i.object_id AND ic.index_id = i.index_id
+        LEFT JOIN sys.columns c ON c.object_id = i.object_id AND c.column_id = ic.column_id
+        WHERE s.name = 'events' AND o.name = 'LIST_EVENTS'
+        ORDER BY i.index_id, ic.key_ordinal, ic.index_column_id
+    """)
+    usable_index_columns = [
+        row.get("column_name")
+        for row in index_rows
+        if row.get("index_name") and row.get("column_name")
+    ]
+    has_event_time_index = "EVENT_TIMESTAMP" in usable_index_columns
+    has_number_index = "NUMBER" in usable_index_columns
+    live_ready = has_event_time_index or has_number_index
+
+    return {
+        "catalog": {
+            "source": "dbo.scada_events",
+            "ready": True,
+            "kind": "alarm_catalog_or_normalized_events",
+        },
+        "liveJournal": {
+            "source": "events.LIST_EVENTS",
+            "ready": live_ready or adapter_ready,
+            "tableShape": index_rows,
+            "materializedAdapter": {
+                "table": "dbo.mobile_incidents",
+                "exists": adapter_exists,
+                "ready": adapter_ready,
+                "indexes": adapter_indexes,
+            },
+            "requiredAdapter": None if (live_ready or adapter_ready) else "indexed_or_materialized_mobile_incidents",
+            "reason": None if (live_ready or adapter_ready) else "events.LIST_EVENTS is a heap/no usable latest-event index; direct latest/range mobile queries are unsafe.",
+        },
+    }
+
+
+def mobile_incident_source_warning():
+    db = default_database()
+    if sql_table_exists(db, "dbo", "mobile_incidents"):
+        return "events.LIST_EVENTS is exposed through indexed dbo.mobile_incidents projection."
+    return "dbo.scada_events is exposed; raw events.LIST_EVENTS is not exposed until an indexed adapter exists."
+
+
 def bracket_identifier(identifier):
     if not TABLE_NAME_RE.match(identifier):
         raise ValueError("Invalid identifier")
@@ -562,6 +825,103 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json(200, self.databases_payload())
             return
 
+        if path == "/mobile/me":
+            if not self.require_api_token():
+                return
+            self.send_json(200, {
+                "user": {
+                    "id": os.getenv("TML_MOBILE_USER_ID", "local-engineer"),
+                    "name": os.getenv("TML_MOBILE_USER_NAME", "Local engineer"),
+                    "role": os.getenv("TML_MOBILE_USER_ROLE", "engineer"),
+                },
+                "allowedObjectScope": "all",
+                "database": default_database(),
+                "timeUtc": utc_now(),
+            })
+            return
+
+        if path == "/mobile/objects":
+            if not self.require_api_token():
+                return
+            self.send_json(200, {
+                "database": default_database(),
+                "objects": mobile_objects(parse_limit(qs, default=100, maximum=500)),
+            })
+            return
+
+        match = re.fullmatch(r"/mobile/objects/([^/]+)", path)
+        if match:
+            if not self.require_api_token():
+                return
+            object_id = unquote(match.group(1))
+            item = mobile_object(object_id)
+            if item is None:
+                self.send_json(404, {"error": "object_not_found", "objectId": object_id})
+                return
+            self.send_json(200, {"database": default_database(), "object": item})
+            return
+
+        match = re.fullmatch(r"/mobile/objects/([^/]+)/points", path)
+        if match:
+            if not self.require_api_token():
+                return
+            object_id = unquote(match.group(1))
+            self.send_json(200, {
+                "database": default_database(),
+                "objectId": object_id,
+                "points": mobile_points(object_id, parse_limit(qs, default=200, maximum=1000)),
+            })
+            return
+
+        match = re.fullmatch(r"/mobile/objects/([^/]+)/events", path)
+        if match:
+            if not self.require_api_token():
+                return
+            object_id = unquote(match.group(1))
+            self.send_json(200, {
+                "database": default_database(),
+                "objectId": object_id,
+                "incidents": mobile_incidents(parse_limit(qs, default=100, maximum=500), object_id=object_id),
+                "sourceWarning": mobile_incident_source_warning(),
+            })
+            return
+
+        match = re.fullmatch(r"/mobile/objects/([^/]+)/scheme", path)
+        if match:
+            if not self.require_api_token():
+                return
+            object_id = unquote(match.group(1))
+            self.send_json(200, {
+                "objectId": object_id,
+                "status": "not_available",
+                "schemeUrl": None,
+                "message": "Scheme index is not integrated yet.",
+            })
+            return
+
+        if path == "/mobile/incidents/source-status":
+            if not self.require_api_token():
+                return
+            self.send_json(200, {
+                "database": default_database(),
+                "incidentSources": mobile_incident_source_status(),
+            })
+            return
+
+        if path == "/mobile/incidents":
+            if not self.require_api_token():
+                return
+            object_id = qs.get("objectId", [None])[0]
+            if object_id is not None:
+                if "/" in object_id:
+                    self.send_json(400, {"error": "invalid_object_id"})
+                    return
+            self.send_json(200, {
+                "database": default_database(),
+                "incidents": mobile_incidents(parse_limit(qs, default=100, maximum=500), object_id=object_id),
+                "sourceWarning": mobile_incident_source_warning(),
+            })
+            return
 
         if path == "/api/firebird/databases":
             if not self.require_api_token():
@@ -666,6 +1026,29 @@ class Handler(BaseHTTPRequestHandler):
             write_env_map(updates)
             logging.info("settings updated by %s", self.client_ip())
             self.redirect("/admin?saved=1")
+            return
+        match = re.fullmatch(r"/mobile/incidents/([^/]+)/status", path)
+        if match:
+            if not self.require_api_token():
+                return
+            length = int(self.headers.get("Content-Length", "0"))
+            raw = self.rfile.read(length).decode("utf-8", errors="replace") if length else "{}"
+            try:
+                payload = json.loads(raw or "{}")
+            except json.JSONDecodeError:
+                self.send_json(400, {"error": "invalid_json"})
+                return
+            status = payload.get("status")
+            allowed = {"accepted", "en_route", "resolved"}
+            if status not in allowed:
+                self.send_json(400, {"error": "invalid_status", "allowed": sorted(allowed)})
+                return
+            self.send_json(501, {
+                "error": "integration_not_ready",
+                "incidentId": unquote(match.group(1)),
+                "requestedStatus": status,
+                "message": "Incident status writeback requires CRM/task adapter integration; SCADA database remains read-only.",
+            })
             return
         self.send_json(404, {"error": "not_found", "path": path})
 

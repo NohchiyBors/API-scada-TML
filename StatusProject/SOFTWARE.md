@@ -62,6 +62,18 @@
 - GET /api/firebird/{alias}/tables/{table}/sample?limit=20 — read-only Firebird sample rows.
 - API data endpoints require Bearer token when TML_REQUIRE_API_TOKEN=true.
 
+## Added Interfaces 2026-06-27
+- GET /mobile/me — local engineer/session stub for ScadaMobile.
+- GET /mobile/objects — domain object/controller list from `dbo.scada_controllers`.
+- GET /mobile/objects/{id} — object/controller detail.
+- GET /mobile/objects/{id}/points — point catalog from `dbo.scada_points`.
+- GET /mobile/objects/{id}/events — object-scoped incidents from `dbo.scada_events`.
+- GET /mobile/incidents — incident feed from `dbo.scada_events`.
+- GET /mobile/incidents/source-status — readiness report for catalog vs live journal incident sources.
+- `/mobile/incidents` source preference: `dbo.mobile_incidents` materialized projection when present/indexed, otherwise `dbo.scada_events` catalog fallback.
+- GET /mobile/objects/{id}/scheme — scheme placeholder returning `not_available`.
+- POST /mobile/incidents/{id}/status — validates transition and returns `501 integration_not_ready`.
+
 
 ## Database Read-only Mode
 - TML_DATABASE_READ_ONLY is rendered as a checkbox in /admin.

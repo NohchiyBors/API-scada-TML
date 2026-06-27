@@ -84,7 +84,7 @@ curl -H "Authorization: Bearer TOKEN" http://localhost:8787/StatusProject
 ```json
 {
   "app": "tml-read-api",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "environment": {
     "api_host": "0.0.0.0",
     "api_port": 8787,
@@ -112,6 +112,49 @@ curl -H "Authorization: Bearer TOKEN" http://localhost:8787/StatusProject
   }
 }
 ```
+
+---
+
+### Mobile / ScadaMobile Endpoints
+
+All `/mobile/*` endpoints require Bearer token authentication when `TML_REQUIRE_API_TOKEN=true`.
+They are read-only except the guarded status endpoint, which validates input and returns `501 integration_not_ready`.
+
+#### `GET /mobile/me`
+
+Returns the current mobile user/session stub.
+
+#### `GET /mobile/objects`
+
+Returns controller/object records from `dbo.scada_controllers`.
+
+#### `GET /mobile/objects/{id}`
+
+Returns one controller/object record.
+
+#### `GET /mobile/objects/{id}/points`
+
+Returns point catalog rows from `dbo.scada_points`, joined to `dbo.scada_point_current` for latest value fields when available.
+
+#### `GET /mobile/objects/{id}/events`
+
+Returns object-scoped mobile incidents.
+
+#### `GET /mobile/incidents`
+
+Returns mobile incidents. The API prefers indexed `dbo.mobile_incidents` when present, otherwise falls back to `dbo.scada_events`.
+
+#### `GET /mobile/incidents/source-status`
+
+Reports readiness for catalog fallback, raw `events.LIST_EVENTS`, and the materialized `dbo.mobile_incidents` adapter.
+
+#### `GET /mobile/objects/{id}/scheme`
+
+Returns a `not_available` scheme placeholder until scheme indexing is integrated.
+
+#### `POST /mobile/incidents/{id}/status`
+
+Validates requested status transitions (`accepted`, `en_route`, `resolved`) and returns `501 integration_not_ready`.
 
 ---
 

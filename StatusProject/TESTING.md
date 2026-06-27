@@ -47,3 +47,17 @@
 - `/admin/logs/data?file=app&level=INFO&limit=5` returned app log events in previous verification.
 - `/StatusProject` returned `client_ip=127.0.0.1` and `security.allowed_ips` in previous verification.
 - Known manual gap: no automated regression test suite yet.
+
+## 2026-06-27 Mobile Adapter Smoke Results
+- `app.py` syntax compiled in memory with `utf-8-sig`.
+- `GET /mobile/objects?limit=3` returned real `ProjectOWEN` controller rows.
+- `GET /mobile/objects/{id}` returned object detail for id `tml-controller-112`.
+- `GET /mobile/incidents?limit=3` returned `dbo.scada_events` rows.
+- `POST /mobile/incidents/{id}/status` with `accepted` returned `501 integration_not_ready`.
+- `GET /mobile/objects/tml-alarms/points?limit=3` returned point rows with `latestValue=null`, `quality=not_available`, and `currentSource=dbo.scada_point_current`.
+- Schema probe verified `dbo.scada_point_current` exists but has 0 rows; all observed `dbo.scada_points` rows group under `controller_id=tml-alarms`.
+- `GET /mobile/incidents?limit=3` returned `objectId=tml-alarms` and point names from the point catalog.
+- `GET /mobile/incidents?objectId=tml-alarms&limit=3` returned filtered mapped alarm catalog rows.
+- `events.LIST_EVENTS` index probe returned only `HEAP`; no usable latest-event index exists.
+- `GET /mobile/incidents/source-status` returned `catalog.ready=true` and `liveJournal.ready=false`.
+- `GET /mobile/incidents/source-status` returned `materializedAdapter.exists=false` before projection DDL execution, while `/mobile/incidents` continued serving `dbo.scada_events` fallback rows.

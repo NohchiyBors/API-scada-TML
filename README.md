@@ -50,6 +50,12 @@ docker compose -f docker-compose.dev.yml down
 - `GET /api/{db}/tables` - список таблиц базы.
 - `GET /api/{db}/table-stats` - список таблиц с количеством строк.
 - `GET /api/{db}/tables/{schema.table}/sample?limit=20` - первые строки таблицы.
+- `GET /mobile/me` - session/user stub for ScadaMobile clients.
+- `GET /mobile/objects` - controller/object list for mobile UI.
+- `GET /mobile/objects/{id}/points` - point catalog with latest-value fields when available.
+- `GET /mobile/incidents` - incident feed from `dbo.mobile_incidents` adapter or catalog fallback.
+- `GET /mobile/incidents/source-status` - readiness report for live journal/materialized adapter.
+- `POST /mobile/incidents/{id}/status` - guarded status writeback stub returning `501 integration_not_ready`.
 
 API не принимает произвольный SQL и не выполняет `INSERT/UPDATE/DELETE`.
 

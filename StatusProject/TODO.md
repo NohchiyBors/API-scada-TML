@@ -13,6 +13,16 @@
 - [ ] Add token rotation procedure for `TML_API_TOKENS` and admin password — process: `operation`
 
 ## Done
+- [x] Add first ScadaMobile `GET /mobile/me` endpoint — process: `implementation`
+- [x] Add first ScadaMobile `GET /mobile/objects` and `GET /mobile/objects/{id}` endpoints — process: `implementation`
+- [x] Add first ScadaMobile `GET /mobile/objects/{id}/points` endpoint — process: `implementation`
+- [x] Join ScadaMobile point responses to `dbo.scada_point_current` latest-value table — process: `implementation`
+- [x] Add first ScadaMobile `GET /mobile/incidents` endpoint over `dbo.scada_events` — process: `implementation`
+- [x] Map ScadaMobile incidents to object ids through `point_id -> scada_points.controller_id` fallback — process: `implementation`
+- [x] Add `pointName` to ScadaMobile incident responses — process: `implementation`
+- [x] Add ScadaMobile `GET /mobile/incidents/source-status` endpoint — process: `implementation`
+- [x] Auto-prefer `dbo.mobile_incidents` materialized adapter for `/mobile/incidents` when table/index are present — process: `implementation`
+- [x] Add guarded `POST /mobile/incidents/{id}/status` returning `501 integration_not_ready` — process: `safety`
 - [x] Create initial Python HTTP API — process: `implementation`
 - [x] Connect API to SQL Server `ProjectOWEN` through pyodbc — process: `integration`
 - [x] Add `/StatusProject` runtime status endpoint — process: `implementation`
@@ -51,3 +61,18 @@
 - `README.md`
 - `PROJECT_STATUS.md`
 - `StatusProject/*.md`
+
+## Latest Update 2026-06-27
+- [x] Added read-only mobile domain adapter functions in `app.py`.
+- [x] Verified syntax by compiling `app.py` text in memory with `utf-8-sig`.
+- [x] Verified direct API `POST /mobile/incidents/{id}/status` returns `501 integration_not_ready` for valid transition request.
+- [x] Verified `dbo.scada_point_current` exists but currently has 0 rows.
+- [x] Verified `dbo.scada_points` currently groups rows under `controller_id=tml-alarms`.
+- [x] Verified `/mobile/incidents?objectId=tml-alarms&limit=3` returns mapped alarm catalog incidents.
+- [x] Verified `events.LIST_EVENTS` is a heap/no usable latest-event index.
+- [x] Verified `/mobile/incidents/source-status` reports catalog ready and live journal not ready.
+- [x] Verified `/mobile/incidents/source-status` reports `dbo.mobile_incidents` adapter missing before DDL execution.
+- [x] Ran reviewed ScadaMobile DDL/backfill scripts; `dbo.mobile_incidents` exists with indexes and 100 bounded rows.
+- [x] Updated `/mobile/incidents` source warning to report `events.LIST_EVENTS` through indexed `dbo.mobile_incidents` projection when the adapter exists.
+- [x] Verified `/mobile/incidents?limit=3` returns `adapterStatus=materialized_mobile_incidents`.
+- [ ] Next: design bounded incremental loader for `dbo.mobile_incidents` and improve point mapping for live journal rows with null `pointName`.

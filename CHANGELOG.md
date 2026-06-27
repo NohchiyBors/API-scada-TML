@@ -11,11 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dockerfile and development Docker Compose deployment.
 - Docker setup instructions for local development and server deployment.
 - Expanded API, configuration, development, quickstart, and troubleshooting documentation.
+- Read-only `/mobile/*` ScadaMobile endpoints for user stub, objects, points, incidents, source readiness, scheme placeholder, and guarded status transitions.
 
 ### Changed
 - Updated package metadata and repository URLs for the GitHub project.
 - Fixed setuptools metadata for packaging the single-module application.
 - Added Docker bridge IP ranges to the example allowed IP list.
+- `/mobile/incidents` now prefers indexed `dbo.mobile_incidents` when present and falls back to `dbo.scada_events`.
 
 ## [0.1.1] - 2026-06-27
 
