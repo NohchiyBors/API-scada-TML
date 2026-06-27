@@ -61,4 +61,5 @@ TML_SQL_PASSWORD
 config.local.json
 temp/
 cache/
+.tmp-*/
 

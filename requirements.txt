@@ -1,2 +1,3 @@
-# Optional: pyodbc is already installed on this host.
-pyodbc
+flask>=2.3.0
+python-dotenv>=1.0.0
+pyodbc>=4.0.35

@@ -1,0 +1,14 @@
+.git
+.gitignore
+.venv
+.tmp-*/
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.log
+logs/
+.env
+.env.*
+StatusProject/
+api_scada_tml.egg-info/

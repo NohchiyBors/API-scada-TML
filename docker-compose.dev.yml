@@ -1,0 +1,18 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tml-read-api-dev
+    ports:
+      - "8787:8787"
+    env_file:
+      - .env
+    environment:
+      # In Docker, localhost points to the container itself. Use host.docker.internal for host SQL Server.
+      TML_SQL_SERVER: host.docker.internal,1433
+      TML_SQL_DRIVER: ODBC Driver 18 for SQL Server
+    volumes:
+      - ./:/app
+      - ./logs:/app/logs
+    restart: unless-stopped

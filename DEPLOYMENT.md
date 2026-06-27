@@ -76,8 +76,8 @@ CMD ["python", "app.py"]
 
 Build and run:
 ```bash
-docker build -t api-scada-tml:0.1.0 .
-docker run -d -p 8787:8787 --env-file .env api-scada-tml:0.1.0
+docker build -t api-scada-tml:0.2.0 .
+docker run -d -p 8787:8787 --env-file .env api-scada-tml:0.2.0
 ```
 
 ### Reverse Proxy (Nginx)

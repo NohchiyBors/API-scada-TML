@@ -1,5 +1,7 @@
 ﻿# TML Read API
 
+Version: `0.2.0`.
+
 Минимальный внешний HTTP API для чтения данных проекта OWEN TML / Телемеханика Лайт.
 
 ## Авторство
@@ -24,6 +26,20 @@ python app.py
 ```
 
 По умолчанию API слушает `http://0.0.0.0:8787`.
+
+## Dev в Docker
+
+```powershell
+cd D:\Data\Repos\API
+docker compose -f docker-compose.dev.yml up --build -d
+Invoke-WebRequest http://127.0.0.1:8787/health
+```
+
+Остановка:
+
+```powershell
+docker compose -f docker-compose.dev.yml down
+```
 
 ## Endpoints
 

@@ -20,7 +20,8 @@ except ImportError:  # pragma: no cover
 APP_DIR = Path(__file__).resolve().parent
 ENV_PATH = APP_DIR / ".env"
 APP_NAME = "tml-read-api"
-APP_ATTRIBUTION = "Разработчик HSPhub.com по заказу astana.company."
+APP_DEVELOPER_NAME = "HSPhub.com"
+APP_DEVELOPER_SITE = "https://HSPhub.com"
 DEFAULT_DATABASES = ["ProjectOWEN"]
 DB_NAME_RE = re.compile(r"^[A-Za-z0-9_\-]+$")
 TABLE_NAME_RE = re.compile(r"^[A-Za-z0-9_\.\-]+$")
@@ -36,6 +37,8 @@ SETTING_KEYS = [
     "TML_SQL_DATABASES",
     "TML_SQL_TIMEOUT",
     "TML_API_CORS_ORIGIN",
+    "TML_CUSTOMER_NAME",
+    "TML_CUSTOMER_SITE",
     "TML_ALLOWED_IPS",
     "TML_ADMIN_USER",
     "TML_ADMIN_PASSWORD",
@@ -141,6 +144,19 @@ def env_bool(name, default=False):
 def csv_env(name):
     raw = os.getenv(name, "")
     return [part.strip() for part in raw.split(",") if part.strip()]
+
+
+def attribution_text():
+    customer = os.getenv("TML_CUSTOMER_NAME", "astana.company").strip()
+    customer_site = os.getenv("TML_CUSTOMER_SITE", "").strip()
+
+    developer_label = APP_DEVELOPER_NAME
+    customer_label = customer_site if not customer else customer
+    if APP_DEVELOPER_SITE and APP_DEVELOPER_SITE != developer_label:
+        developer_label = f"{developer_label} ({APP_DEVELOPER_SITE})"
+    if customer_site and customer_site != customer_label:
+        customer_label = f"{customer_label} ({customer_site})"
+    return f"Разработчик {developer_label} по заказу {customer_label}."
 
 
 def configured_databases():
@@ -752,7 +768,7 @@ button {{ background: #2563eb; color: white; border: 0; cursor: pointer; }}
 </div>
 <div class="meta" id="meta">not loaded</div>
 <div class="logbox" id="logbox"></div>
-<div class="attribution">{html.escape(APP_ATTRIBUTION)}</div>
+<div class="attribution">{html.escape(attribution_text())}</div>
 </main>
 <script>
 let timer = null;
@@ -866,7 +882,7 @@ nav a {{ color: white; margin-right: 16px; }}
 {''.join(fields)}
 <button type="submit">Save settings</button>
 </form>
-<div class="attribution">{html.escape(APP_ATTRIBUTION)}</div>
+<div class="attribution">{html.escape(attribution_text())}</div>
 </main>
 </body>
 </html>"""

@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "api-scada-tml"
-version = "0.1.0"
-description = "Safe read-only HTTP API for OWEN TML / Telemechanika Lite SCADA system"
+version = "0.2.0"
+description = "Read-only HTTP API for OWEN TML / Telemechanika Lite with Docker deployment support"
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.10"
@@ -29,13 +29,13 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/API-SCADA-TML"
-Documentation = "https://github.com/yourusername/API-SCADA-TML/wiki"
-Repository = "https://github.com/yourusername/API-SCADA-TML.git"
-"Bug Tracker" = "https://github.com/yourusername/API-SCADA-TML/issues"
+Homepage = "https://github.com/NohchiyBors/API-scada-TML"
+Documentation = "https://github.com/NohchiyBors/API-scada-TML#readme"
+Repository = "https://github.com/NohchiyBors/API-scada-TML.git"
+"Bug Tracker" = "https://github.com/NohchiyBors/API-scada-TML/issues"
 
 [tool.setuptools]
-packages = ["app"]
+py-modules = ["app"]
 
 [tool.black]
 line-length = 100
