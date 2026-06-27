@@ -1,0 +1,29 @@
+# Temporary and backup files
+*.tmp
+*.temp
+*.bak
+*~
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# IDE and editor artifacts
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# OS-specific
+.DS_Store
+.windows-build-log
+
+# Keep all markdown documentation
+!*.md

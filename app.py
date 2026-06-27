@@ -20,6 +20,7 @@ except ImportError:  # pragma: no cover
 APP_DIR = Path(__file__).resolve().parent
 ENV_PATH = APP_DIR / ".env"
 APP_NAME = "tml-read-api"
+APP_ATTRIBUTION = "Разработчик HSPhub.com по заказу astana.company."
 DEFAULT_DATABASES = ["ProjectOWEN"]
 DB_NAME_RE = re.compile(r"^[A-Za-z0-9_\-]+$")
 TABLE_NAME_RE = re.compile(r"^[A-Za-z0-9_\.\-]+$")
@@ -734,6 +735,7 @@ button {{ background: #2563eb; color: white; border: 0; cursor: pointer; }}
 .logbox {{ background: #101828; color: #e4e7ec; padding: 14px; min-height: 520px; max-height: 70vh; overflow: auto; white-space: pre-wrap; font-family: Consolas, monospace; font-size: 13px; }}
 .meta {{ color: #667085; margin: 8px 0 12px; }}
 .badge {{ display: inline-block; padding: 3px 8px; border-radius: 12px; background: #e8f0fe; color: #1d4ed8; margin-left: 8px; }}
+.attribution {{ margin-top: 14px; color: #667085; font-size: 13px; }}
 </style>
 </head>
 <body>
@@ -750,6 +752,7 @@ button {{ background: #2563eb; color: white; border: 0; cursor: pointer; }}
 </div>
 <div class="meta" id="meta">not loaded</div>
 <div class="logbox" id="logbox"></div>
+<div class="attribution">{html.escape(APP_ATTRIBUTION)}</div>
 </main>
 <script>
 let timer = null;
@@ -852,6 +855,7 @@ button {{ margin-top: 18px; padding: 10px 16px; background: #2563eb; color: whit
 .switch input {{ width: 20px; height: 20px; }}
 .ok {{ background: #e8f7ee; border: 1px solid #97d4aa; padding: 10px; margin-bottom: 12px; }}
 nav a {{ color: white; margin-right: 16px; }}
+.attribution {{ margin-top: 14px; color: #667085; font-size: 13px; }}
 </style>
 </head>
 <body>
@@ -862,6 +866,7 @@ nav a {{ color: white; margin-right: 16px; }}
 {''.join(fields)}
 <button type="submit">Save settings</button>
 </form>
+<div class="attribution">{html.escape(APP_ATTRIBUTION)}</div>
 </main>
 </body>
 </html>"""
